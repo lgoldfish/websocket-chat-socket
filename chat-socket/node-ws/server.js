@@ -10,7 +10,8 @@ const router = new Router();
 const users = [];
 const WebSocketServer = WebSocket.Server;
 const server = http.createServer(app.callback());
-let wssUsers =  new WebSocketServer({server})
+let wssUsers =  new WebSocketServer({noServer:true});
+let wssMessage = new WebSocketServer({noServer:true});
 app.use(bodyParser());
 app.use(cors({
   origin:(ctx => {
@@ -59,6 +60,21 @@ router.get('/', (ctx, next) => {
   }
 })
 app.use(router.routes()).use(router.allowedMethods());
+server.on('upgrade', (request, socket, head) => {
+  const pathname = url.parse(request.url).pathname;
+  console.log('pathname is',pathname);
+  if(pathname === '/users') {
+      wssUsers.handleUpgrade(request, socket, head, (ws) => {
+          wssUsers.emit('connection', ws, request);
+      })
+  }else if(pathname === '/message') {
+      wssMessage.handleUpgrade(request, socket, head, (ws) => {
+          wssMessage.emit('connection', ws, request);
+      })
+  }else {
+      socket.destroy()
+  }
+})
 server.listen(3000);
 server.on('error', error => {
   console.log('error in server', error)
@@ -71,6 +87,13 @@ const reconnect = (url) => {
 
 }
 
+const broadcast = (wss,data) => {
+  wss.clients.forEach((client) => {
+    if(client.readyState === WebSocket.OPEN){
+      client.send(JSON.stringify(data));
+    }
+  })
+}
 const createWebSocket = (wss, server) =>  {
   wss.on('connection', (ws, req) => {
     console.log('wss connection')
@@ -108,10 +131,4 @@ const createWebSocket = (wss, server) =>  {
     // console.log('wss headers ', headers, req)
   })
 }
-const broadcast = (wss,data) => {
-  wss.clients.forEach((client) => {
-    if(client.readyState === WebSocket.OPEN){
-      client.send(JSON.stringify(data));
-    }
-  })
-}
+createWebSocket(wssUsers);

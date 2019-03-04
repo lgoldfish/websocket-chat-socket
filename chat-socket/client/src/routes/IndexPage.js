@@ -3,7 +3,9 @@ import { Input, Radio, message  } from 'antd';
 import REQUSET from '../server';
 const RadioGroup = Radio.Group;
 const API = 'http://localhost:3000/';
-const WSAPI = 'ws://localhost:3000/'
+const WSAPI = 'ws://localhost:3000/';
+let wsUsers = '';
+let wsMessage = ''
 class IndexPage extends Component {
   constructor(props) {
     super();
@@ -16,14 +18,16 @@ class IndexPage extends Component {
       userName:'wqf'
     }
   }
-  initWebSocket = ({path, wsName}) => {
-    const ws = new WebSocket(WSAPI + path);
+  initWebSocket = ({ws, path, wsName}) => {
+    ws = new WebSocket(WSAPI + path);
     ws.onopen = () => {
       message.success(`${wsName} : 已连接！`);
       console.log(wsName, '已连接');
-      const { myInfo } = this.state; 
-      console.log('发送user',myInfo);
-      ws.send(JSON.stringify(myInfo))
+      if(path === 'users') {
+        const { myInfo } = this.state; 
+        console.log('发送',wsName,myInfo);
+        ws.send(JSON.stringify(myInfo));
+      }
     }
     ws.onmessage = (msg) => {
       console.log('onmessage ', msg);
@@ -43,6 +47,9 @@ class IndexPage extends Component {
     const { keyCode, target:{value} } = e;
     if(keyCode === 13) {
       console.log('value is', value);
+      const { userName, status } = this.state.myInfo;
+      console.log('wsMessage',wsMessage)
+      wsMessage.send(JSON.stringify({userName, status, message:value}));
     }
   }
   handleChangeRadio = async (e) => {
@@ -64,7 +71,8 @@ class IndexPage extends Component {
     )
     if(code === 200) {
       message.success(msg)
-      this.initWebSocket({path:'users', wsName:'用户'})
+      this.initWebSocket({ws:wsUsers, path:'users', wsName:'用户'})
+      this.initWebSocket({ws:wsMessage, path:'message', wsName:'消息'})
     }else {
       message.error(msg)
     }
@@ -87,10 +95,12 @@ class IndexPage extends Component {
           <div className="users-list">
             <div>
               <h4 style={{lineHeight:'40px'}}>Hello {userName}</h4>
-              <RadioGroup onChange={this.handleChangeRadio} value={status}>
-                <Radio value={1}>在线</Radio>
-                <Radio value={0}>离线</Radio>
-              </RadioGroup>
+              <div>
+                <RadioGroup onChange={this.handleChangeRadio} value={status}>
+                  <Radio value={1}>在线</Radio>
+                  <Radio value={0}>离线</Radio>
+                </RadioGroup>
+              </div>
             </div>
             <div className="users-list-names">
               {users.map((item, i) => (
@@ -118,6 +128,7 @@ class IndexPage extends Component {
           .message-list {
             width:600px;
             margin: 10px; 
+            display:initial;
             border:5px solid white;
           }
           .users-list {
