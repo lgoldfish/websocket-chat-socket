@@ -1,0 +1,15 @@
+@import "~reset.css";
+@import '~highlight.js/styles/default.css';
+body {
+    color: rebeccapurple;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+div {
+    display: flex;
+}
+
+.sfsfsfsfs {
+    color: rebeccapurple;
+}

@@ -1,0 +1,7 @@
+/chat-socket/node-ws/node_modules
+/chat-socket/client/node_modules
+npm-debug.log*
+.DS_Store
+package-lock.json
+# Editor directories and files
+.vscode 
