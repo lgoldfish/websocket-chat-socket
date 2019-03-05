@@ -5,6 +5,8 @@ const HtmlWebpackPlugin = require("html-webpack-plugin");
 const config = require("./config.js");
 const base = require('./webpack.base.config.js');
 const path = require('path');
+const {port,username} = process.env;
+console.log('port is', port, username);
 module.exports = webpackMerge(base, {
     mode:"development",
     output: {
@@ -14,7 +16,7 @@ module.exports = webpackMerge(base, {
     devServer: {
         hot: true,
         host: 'localhost',
-        port: 8080,
+        port,
         open:true,
         inline:true,
         historyApiFallback: true
@@ -49,5 +51,8 @@ module.exports = webpackMerge(base, {
             from: path.resolve(__dirname, "..", "public"),
             ignore: ['.*', 'index.html']
         }]),
+        new webpack.DefinePlugin({
+            _USERNAME_:JSON.stringify({username:username})
+        }),
     ]
 });

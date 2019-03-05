@@ -8,10 +8,66 @@ const app = new Koa();
 const cors = require('koa2-cors');
 const router = new Router();
 const users = [];
+const chatMessageList = [];
 const WebSocketServer = WebSocket.Server;
 const server = http.createServer(app.callback());
 let wssUsers =  new WebSocketServer({noServer:true});
 let wssMessage = new WebSocketServer({noServer:true});
+// 广播
+const broadcast = (wss,data) => {
+  wss.clients.forEach((client) => {
+    if(client.readyState === WebSocket.OPEN){
+      client.send(JSON.stringify(data));
+    }
+  })
+}
+// 创建socket
+const createWebSocket = (wss) =>  {
+  wss.on('connection', (ws, req) => {
+    const pathname = url.parse(req.url).pathname;
+    console.log('wss connection', pathname)
+    ws.on('open', () => {
+      console.log('connected')
+    })
+    ws.on('message', (message) => {
+      console.log('receive message is', message)
+      if(pathname === '/users') {
+        const user = JSON.parse(message);
+        if(users.findIndex(item => item.userName === user.userName) < 0) {
+          users.push(user)
+        }else {
+          users.forEach(item => {
+            if(item.userName === user.userName) {
+              item.status = user.status;
+            }
+          })
+        }
+        broadcast(wss, users)
+      }else if(pathname === '/message'){
+        const chatMessage = JSON.parse(message);
+        chatMessageList.push(chatMessage)
+        chatMessageList.splice(0, chatMessageList.length -7);
+        broadcast(wss, chatMessageList)
+      }
+    })
+    ws.on('close', () => {
+      console.log('close')
+      ws.close()
+    })
+    ws.on('error', (error) => {
+      console.log(error)
+    })
+  })
+  wss.on('error', (err) => {
+      console.log(' wss error', err)
+  })
+  wss.on('close', () => {
+    console.log('wss close')
+  })
+  wss.on('headers', (headers, req) => {
+    // console.log('wss headers ', headers, req)
+  })
+}
 app.use(bodyParser());
 app.use(cors({
   origin:(ctx => {
@@ -27,7 +83,6 @@ router.get('/', (ctx, next) => {
 // 登陆
 .post('/login', (ctx, next) => {
   const { body, body:{ userName, status }} = ctx.request;
-  console.log('login in',  userName, status)
   ctx.response.status = 200 ;
   ctx.body = {
     code:userName ? 200 : 400,
@@ -36,7 +91,6 @@ router.get('/', (ctx, next) => {
   }
   if(userName) {
     users.push[{...body}]
-    createWebSocket(wssUsers, server)
   }
 })
 // 登出
@@ -86,49 +140,7 @@ server.on('listening',() => {
 const reconnect = (url) => {
 
 }
+createWebSocket(wssUsers)
+createWebSocket(wssMessage)
 
-const broadcast = (wss,data) => {
-  wss.clients.forEach((client) => {
-    if(client.readyState === WebSocket.OPEN){
-      client.send(JSON.stringify(data));
-    }
-  })
-}
-const createWebSocket = (wss, server) =>  {
-  wss.on('connection', (ws, req) => {
-    console.log('wss connection')
-    ws.on('open', () => {
-      console.log('connected')
-    })
-    ws.on('message', (message) => {
-      console.log('receive message is', message)
-      const user = JSON.parse(message);
-      if(users.findIndex(item => item.userName === user.userName) < 0) {
-        users.push(user)
-      }else {
-        users.forEach(item => {
-          if(item.userName === user.userName) {
-            item.status = user.status;
-          }
-        })
-      }
-      broadcast(wss, users)
-    })
-    ws.on('close', () => {
-      console.log('close')
-    })
-    ws.on('error', (error) => {
-      console.log(error)
-    })
-  })
-  wss.on('error', (err) => {
-      console.log(' wss error', err)
-  })
-  wss.on('close', () => {
-    console.log('wss close')
-  })
-  wss.on('headers', (headers, req) => {
-    // console.log('wss headers ', headers, req)
-  })
-}
-createWebSocket(wssUsers);
+

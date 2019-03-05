@@ -9,13 +9,6 @@
         "build": "cross-env NODE_ENV=prod webpack",
         "start": "npm run dev"
     },
-    "lint-staged": {
-        "*.{js,jsx}": [
-            "eslint --fix",
-            "prettier-eslint --write",
-            "git add"
-        ]
-    },
     "author": "jsfish",
     "license": "ISC",
     "devDependencies": {
@@ -78,10 +71,5 @@
         "redux": "^4.0.1",
         "reset.css": "^2.0.2",
         "whatwg-fetch": "^3.0.0"
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "lint-staged"
-        }
     }
 }
