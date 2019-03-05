@@ -31,6 +31,10 @@ const createWebSocket = (wss) =>  {
     })
     ws.on('message', (message) => {
       console.log('receive message is', message)
+      if(message === 'ping') {
+        ws.send('pong')
+        return;
+      }
       if(pathname === '/users') {
         const user = JSON.parse(message);
         if(users.findIndex(item => item.userName === user.userName) < 0) {
@@ -80,7 +84,7 @@ router.get('/', (ctx, next) => {
   ctx.response.status = 200;
   ctx.response.body = '<h1> hello koa ws </h1>'
 })
-// 登陆
+// 登陆 api
 .post('/login', (ctx, next) => {
   const { body, body:{ userName, status }} = ctx.request;
   ctx.response.status = 200 ;
@@ -93,7 +97,7 @@ router.get('/', (ctx, next) => {
     users.push[{...body}]
   }
 })
-// 登出
+// 登出 api
 .post('/logOut', (ctx, next) => {
   const { body:{ userName, status }} = ctx.request;
   console.log('login in',  userName, status)
@@ -114,6 +118,7 @@ router.get('/', (ctx, next) => {
   }
 })
 app.use(router.routes()).use(router.allowedMethods());
+// 多个websocket 服务托管给http server
 server.on('upgrade', (request, socket, head) => {
   const pathname = url.parse(request.url).pathname;
   console.log('pathname is',pathname);

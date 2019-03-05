@@ -6,11 +6,13 @@ const RadioGroup = Radio.Group;
 const API = 'http://localhost:3000/';
 const WSAPI = 'ws://localhost:3000/';
 console.log('_USERNAME_',_USERNAME_)
+let lockReconnect = false;
+let reconnectTimer = '';
 class IndexPage extends Component {
   constructor(props) {
     super();
     this.wsMessage = '';
-    this.wsUsers = ''
+    this.wsUsers = '';
   }
   state = {
     users:[],
@@ -21,55 +23,10 @@ class IndexPage extends Component {
     }
   }
   componentDidMount() {
-    this.wsMessage = new WebSocket(WSAPI + 'message');
-    this.wsUsers = new WebSocket(WSAPI + 'users');
-    this.initWebSocket({ws:this.wsUsers, path:'users', wsName:'用户'})
-    this.initWebSocket({ws:this.wsMessage, path:'message', wsName:'消息'})
+    this.createWebSocket('users', '用户websocket')
+    this.createWebSocket('message', '信息websocket')
   }
-  initWebSocket = ({ws, path, wsName}) => {
-    const { myInfo:{status,userName}} = this.state;
-    ws.onopen = () => {
-      // message.success(`${wsName} : 已连接！`);
-      console.log(wsName, '已连接');
-      if(path === 'users') {
-        const { myInfo } = this.state; 
-        ws.send(JSON.stringify(myInfo));
-      }
-      if(path === 'message') {
-        this.wsMessage.send(JSON.stringify({userName, status, message:`我来了`}))
-      }
-    }
-    ws.onmessage = (msg) => {
-      const { data, currentTarget:{url} } = msg;
-      const { pathname } = parseUrl(url);
-      if(pathname === '/users') {
-        this.setState({users:JSON.parse(data)});
-      }else if(pathname === '/message') {
-        this.setState({messages:JSON.parse(data)});
-      }
-    }
-    ws.onclose = () => {
-      message.warn(wsName +  '已关闭' ,10);
-      console.log(wsName , '已关闭');
-    }
-    ws.onerror = (error) => {
-      console.log(wsName, error);
-      message.error(wsName + error.toString(), 10);
-    }
-  }
-  handleKeyDown = (e) => {
-    const { keyCode, target:{value} } = e;
-    if(keyCode === 13) {
-      const { userName, status } = this.state.myInfo;
-      if(status) {
-        const message = JSON.stringify({userName, status, message:value});
-        console.log('message is',message, this.wsMessage)
-        this.wsMessage.send(message);
-      }else {
-        message.warn('您已经离线了')
-      }
-    }
-  }
+  // 用户登陆登出
   handleChangeRadio = async (e) => {
     const { target:{value}} = e;
     const { userName } = this.state.myInfo;
@@ -96,6 +53,110 @@ class IndexPage extends Component {
     this.wsUsers.send(JSON.stringify({userName, status:value}))
     this.setState(preState => ({myInfo:{...preState.myInfo, status:+value}}))
   }
+  // 创建webscoket 连接
+  createWebSocket = (path, wsName) => {
+    try {
+      if(path === 'users') {
+        this.wsUsers = new WebSocket(WSAPI + path);
+        this.wsUsers.heartCheckOption = {
+          timeoutTimer:null,
+          serverTimeOutTimer:null
+        } 
+        this.initWebSocket({ws:this.wsUsers, path, wsName})
+      }
+      if(path == 'message') {
+        this.wsMessage = new WebSocket(WSAPI + path);
+        this.wsMessage.heartCheckOption = {
+          timeoutTimer:null,
+          serverTimeOutTimer:null
+        } 
+        this.initWebSocket({ws:this.wsMessage, path, wsName})
+      }
+    } catch (error) {
+      console.log(error)
+      this.reconnect(path, wsName)
+    }
+  }
+  // 初始化 websocket监听事件 
+  initWebSocket = ({ws, path, wsName}) => {
+    const { myInfo:{status,userName}} = this.state;
+    ws.onopen = () => {
+      // message.success(`${wsName} : 已连接！`);
+      console.log(wsName, '已连接');
+      if(path === 'users') {
+        const { myInfo } = this.state; 
+        this.wsUsers.send(JSON.stringify(myInfo));
+      }
+      if(path === 'message') {
+        this.wsMessage.send(JSON.stringify({userName, status, message:`我来了`}))
+      }
+    }
+    ws.onmessage = (msg) => {
+      const { data, currentTarget:{url} } = msg;
+      const { pathname } = parseUrl(url);
+      this.heartCheck(ws);
+      if(data !=='pong') {
+        if(pathname === '/users') {
+          this.setState({users:JSON.parse(data)});
+        }else if(pathname === '/message') {
+          this.setState({messages:JSON.parse(data)});
+        }
+      }
+    }
+    ws.onclose = () => {
+      message.warn(wsName +  '已关闭' ,10);
+      console.log(wsName , '已关闭');
+      this.reconnect(path, wsName)
+    }
+    ws.onerror = (error) => {
+      console.log(wsName, error);
+      message.error(wsName + error.toString(), 10);
+      this.reconnect(path, wsName)
+    }
+  }
+  // 重连机制
+  reconnect = (path, wsName) => {
+    if(lockReconnect) {
+      return
+    }
+    lockReconnect = false;
+    reconnectTimer && clearTimeout(reconnectTimer)
+    reconnectTimer = setTimeout(()=> {
+      this.createWebSocket(path, wsName)
+    }, 4000)
+  }
+  // 心跳检测
+  heartCheck = (ws) => {
+    if( ws.heartCheckOption.timeoutTimer) {
+        window.clearTimeout( ws.heartCheckOption.timeoutTimer) ;
+        ws.heartCheckOption.timeoutTimer = null;
+    } 
+    if( ws.heartCheckOption.serverTimeOutTimer) {
+      window.clearTimeout( ws.heartCheckOption.serverTimeOutTimer);
+      ws.heartCheckOption.serverTimeOutTimer = null;
+    }
+    ws.heartCheckOption.timeoutTimer = setTimeout(() => {
+      ws.send('ping')
+      ws.heartCheckOption.serverTimeOutTimer = setTimeout(()=> {
+        console.log('heart close')
+          ws.close()
+      },  3000) 
+    },  3000)
+  }
+  // 消息发送
+  handleKeyDown = (e) => {
+    const { keyCode, target:{value} } = e;
+    if(keyCode === 13) {
+      const { userName, status } = this.state.myInfo;
+      if(status) {
+        const message = JSON.stringify({userName, status, message:value});
+        this.wsMessage.send(message);
+      }else {
+        message.warn('您已经离线了')
+      }
+    }
+  }
+
   render() {
     const { myInfo:{status, userName }, users, messages} = this.state;
     return (
@@ -133,56 +194,7 @@ class IndexPage extends Component {
           </div>
         </div>
         <style jsx>{`
-          .container {
-            width:900px;
-            margin:0 auto;
-          }
-          h1 {
-            text-align:center;
-            padding-top:50px;
-          }
-          .content {
-            background:#85f0f5;
-            margin:20px auto;
-            height:600px;
-            display:flex;
-            justify-content:space-between;
-          }
-          .message-list {
-            width:600px;
-            margin: 10px; 
-            display:initial;
-            border:5px solid white;
-          }
-          .users-list {
-            width:260px;
-            border:5px solid white;
-            margin:10px;
-            padding:0 5px;
-          }
-          .users-list-names {
-            border-top:2px solid white;
-            margin-top:20px;
-            padding-top:20px;
-          }
-          .message-content {
-            height:500px;
-            overflow-y:scroll;
-            border:5px solid white;
-            background:#ffffff;
-            padding:10px;
-          }
-          .message-single {
-            background:#e0effc;
-            border-radius:4px;
-            margin:5px 0;
-            padding:5px;
-          }
-          .message-single h5 {
-            font-size:16px;
-            line-height:20px;
-            padding-bottom:10px;
-          }
+         
         `}</style>
       </div>
     );

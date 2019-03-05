@@ -1,2 +1,60 @@
 @import "~reset.css";
 @import '~highlight.js/styles/default.css';
+.container {
+    width: 900px;
+    margin: 0 auto;
+}
+
+h1 {
+    text-align: center;
+    padding-top: 50px;
+}
+
+.content {
+    background: #85f0f5;
+    margin: 20px auto;
+    height: 600px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.message-list {
+    width: 600px;
+    margin: 10px;
+    display: initial;
+    border: 5px solid white;
+}
+
+.users-list {
+    width: 260px;
+    border: 5px solid white;
+    margin: 10px;
+    padding: 0 5px;
+}
+
+.users-list-names {
+    border-top: 2px solid white;
+    margin-top: 20px;
+    padding-top: 20px;
+}
+
+.message-content {
+    height: 500px;
+    overflow-y: scroll;
+    border: 5px solid white;
+    background: #ffffff;
+    padding: 10px;
+}
+
+.message-single {
+    background: #e0effc;
+    border-radius: 4px;
+    margin: 5px 0;
+    padding: 5px;
+}
+
+.message-single h5 {
+    font-size: 16px;
+    line-height: 20px;
+    padding-bottom: 10px;
+}
