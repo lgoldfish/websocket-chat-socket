@@ -1,5 +1,7 @@
 /chat-socket/node-ws/node_modules
 /chat-socket/client/node_modules
+/learn/web/node_modules
+/learn/node/node_modules
 npm-debug.log*
 .DS_Store
 package-lock.json
