@@ -221,3 +221,14 @@
         })
 ```
 ##[(websocket)协议中Ping Pong，Socket通讯ping pong(长连接)](https://blog.csdn.net/ShareUs/article/details/85246287)
+
+WebSocket & EventSource 的区别
+
+WebSocket基于TCP协议，EventSource基于http协议。
+EventSource是单向通信，而websocket是双向通信。
+EventSource只能发送文本，而websocket支持发送二进制数据。
+在实现上EventSource比websocket更简单。
+EventSource有自动重连接（不借助第三方）以及发送随机事件的能力。
+websocket的资源占用过大EventSource更轻量。
+websocket可以跨域，EventSource基于http跨域需要服务端设置请求头。
+https://my.oschina.net/zhangyafei/blog/1796337
