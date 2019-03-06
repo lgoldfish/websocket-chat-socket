@@ -7,7 +7,6 @@ wss.on('connection', (ws)=> {
         console.log(msg)
         msggobal = msg
       wss.clients.forEach((ws2) => {
-
         ws2.send(msg)
       })
     })
